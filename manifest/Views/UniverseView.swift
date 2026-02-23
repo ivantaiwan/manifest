@@ -2,11 +2,12 @@ import SwiftUI
 
 struct UniverseView: View {
     @ObservedObject var viewModel: UniverseViewModel
+    @EnvironmentObject var settings: AppSettingsViewModel
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 24) {
-                Text("宇宙小語")
+                Text(L10n.t(.universeQuote, settings.language))
                     .font(.title2.bold())
 
                 Text(viewModel.currentQuote)
@@ -18,20 +19,20 @@ struct UniverseView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 16))
                     .padding(.horizontal)
 
-                Button("換一句") {
+                Button(L10n.t(.changeQuote, settings.language)) {
                     viewModel.refreshQuote()
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(ManifestTheme.babyBlue)
 
-                Text("通知會每天每 3 小時循環，並直接顯示一句宇宙小語")
+                Text(L10n.t(.quoteNoticeHint, settings.language))
                     .font(.footnote)
                     .foregroundStyle(.secondary)
 
                 Spacer()
             }
             .padding(.top)
-            .navigationTitle("宇宙")
+            .navigationTitle(L10n.t(.universeTitle, settings.language))
             .manifestBackground()
         }
     }

@@ -7,9 +7,21 @@ final class MeditationViewModel: ObservableObject {
     @Published private(set) var remainingSeconds = 0
     @Published private(set) var isRunning = false
     @Published private(set) var didComplete = false
+    @Published private(set) var streakDays = 0
+    @Published private(set) var todayText = ""
+    @Published private(set) var lastCompletedText = "尚未完成"
 
     private var timer: Timer?
     private var endDate: Date?
+    private let progressService = MeditationProgressService()
+    private let audioService = MeditationAudioService.shared
+
+    init() {
+        todayText = progressService.formatDate()
+        let progress = progressService.load()
+        streakDays = progress.streakDays
+        lastCompletedText = progressService.formatDayKey(progress.lastCompletedDayKey)
+    }
 
     func start() {
         let duration = selectedMinutes * 60
@@ -18,6 +30,7 @@ final class MeditationViewModel: ObservableObject {
         isRunning = true
         remainingSeconds = duration
         endDate = Date().addingTimeInterval(TimeInterval(duration))
+        audioService.playCue()
 
         timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
@@ -32,6 +45,7 @@ final class MeditationViewModel: ObservableObject {
         timer?.invalidate()
         timer = nil
         isRunning = false
+        audioService.stop()
     }
 
     func timeText() -> String {
@@ -47,6 +61,10 @@ final class MeditationViewModel: ObservableObject {
         if remainingSeconds == 0 {
             stop()
             didComplete = true
+            let progress = progressService.markCompleted(on: Date())
+            streakDays = progress.streakDays
+            todayText = progressService.formatDate()
+            lastCompletedText = progressService.formatDayKey(progress.lastCompletedDayKey)
         }
     }
 }

@@ -55,6 +55,14 @@ final class MorningTodoViewModel: ObservableObject {
         saveToday()
     }
 
+    func updateTask(id: UUID, newTitle: String) {
+        let trimmed = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.isEmpty == false else { return }
+        guard let index = items.firstIndex(where: { $0.id == id }) else { return }
+        items[index].title = trimmed
+        saveToday()
+    }
+
     func delete(at offsets: IndexSet) {
         for index in offsets.sorted(by: >) {
             items.remove(at: index)

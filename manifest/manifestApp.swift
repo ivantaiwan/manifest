@@ -6,33 +6,60 @@ struct ManifestApp: App {
     @StateObject private var gratitudeVM = GratitudeViewModel()
     @StateObject private var meditationVM = MeditationViewModel()
     @StateObject private var universeVM = UniverseViewModel()
+    @StateObject private var settingsVM = AppSettingsViewModel()
+    @State private var showIntro = true
 
     var body: some Scene {
         WindowGroup {
-            TabView {
-                MorningTodoView(viewModel: morningVM)
-                    .tabItem {
-                        Label("早晨", systemImage: "sun.max.fill")
-                    }
+            ZStack {
+                TabView {
+                    MorningTodoView(viewModel: morningVM)
+                        .environmentObject(settingsVM)
+                        .tabItem {
+                            Label(L10n.t(.tabMorning, settingsVM.language), systemImage: "sun.max.fill")
+                        }
 
-                GratitudeView(viewModel: gratitudeVM)
-                    .tabItem {
-                        Label("感恩", systemImage: "heart.text.square.fill")
-                    }
+                    GratitudeView(viewModel: gratitudeVM)
+                        .environmentObject(settingsVM)
+                        .tabItem {
+                            Label(L10n.t(.tabGratitude, settingsVM.language), systemImage: "heart.text.square.fill")
+                        }
 
-                MeditationView(viewModel: meditationVM)
-                    .tabItem {
-                        Label("冥想", systemImage: "moon.stars.fill")
-                    }
+                    MeditationView(viewModel: meditationVM)
+                        .environmentObject(settingsVM)
+                        .tabItem {
+                            Label(L10n.t(.tabMeditation, settingsVM.language), systemImage: "moon.stars.fill")
+                        }
 
-                UniverseView(viewModel: universeVM)
-                    .tabItem {
-                        Label("宇宙", systemImage: "sparkles")
-                    }
+                    UniverseView(viewModel: universeVM)
+                        .environmentObject(settingsVM)
+                        .tabItem {
+                            Label(L10n.t(.tabUniverse, settingsVM.language), systemImage: "sparkles")
+                        }
+
+                    SettingsView()
+                        .environmentObject(settingsVM)
+                        .tabItem {
+                            Label(L10n.t(.tabSettings, settingsVM.language), systemImage: "gearshape.fill")
+                        }
+                }
+                .tint(ManifestTheme.pink)
+
+                if showIntro {
+                    IntroManifestView()
+                        .environmentObject(settingsVM)
+                        .transition(.opacity)
+                        .zIndex(10)
+                }
             }
-            .tint(ManifestTheme.pink)
             .task {
                 await universeVM.bootstrapNotifications()
+                if showIntro {
+                    try? await Task.sleep(for: .seconds(1.8))
+                    withAnimation(.easeInOut(duration: 0.35)) {
+                        showIntro = false
+                    }
+                }
             }
         }
     }

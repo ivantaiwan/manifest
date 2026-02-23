@@ -2,14 +2,17 @@ import SwiftUI
 
 struct MorningTodoView: View {
     @ObservedObject var viewModel: MorningTodoViewModel
+    @EnvironmentObject var settings: AppSettingsViewModel
+    @State private var editingItem: TodoItem?
+    @State private var editingText = ""
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 14) {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("今日進度")
+                    Text(L10n.t(.progress, settings.language))
                         .font(.headline)
-                    Text("\(viewModel.doneCount)/\(max(viewModel.items.count, 1)) 已完成")
+                    Text("\(viewModel.doneCount)/\(max(viewModel.items.count, 1)) \(L10n.t(.doneProgress, settings.language))")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                     ProgressView(value: viewModel.progress)
@@ -21,9 +24,9 @@ struct MorningTodoView: View {
                 .padding(.horizontal)
 
                 HStack {
-                    TextField("新增待辦", text: $viewModel.newTaskTitle)
+                    TextField(L10n.t(.addTodoPlaceholder, settings.language), text: $viewModel.newTaskTitle)
                         .textFieldStyle(.roundedBorder)
-                    Button("新增") { viewModel.addTask() }
+                    Button(L10n.t(.add, settings.language)) { viewModel.addTask() }
                         .buttonStyle(.borderedProminent)
                         .tint(ManifestTheme.lilac)
                 }
@@ -45,14 +48,46 @@ struct MorningTodoView: View {
                                 Spacer()
                             }
                         }
+                        .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                            Button {
+                                editingItem = item
+                                editingText = item.title
+                            } label: {
+                                Image(systemName: "pencil")
+                            }
+                            .tint(ManifestTheme.babyBlue)
+                        }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                if let realIndex = viewModel.items.firstIndex(where: { $0.id == item.id }) {
+                                    viewModel.delete(at: IndexSet(integer: realIndex))
+                                }
+                            } label: {
+                                Image(systemName: "trash")
+                            }
+                        }
                     }
                     .onDelete(perform: viewModel.delete)
                 }
                 .scrollContentBackground(.hidden)
                 .background(Color.clear)
             }
-            .navigationTitle("早上 To-Do")
+            .navigationTitle(L10n.t(.morningTitle, settings.language))
             .manifestBackground()
+            .alert(L10n.t(.addTodoPlaceholder, settings.language), isPresented: Binding(
+                get: { editingItem != nil },
+                set: { if !$0 { editingItem = nil } }
+            )) {
+                TextField(L10n.t(.addTodoPlaceholder, settings.language), text: $editingText)
+                Button("OK") {
+                    guard let item = editingItem else { return }
+                    viewModel.updateTask(id: item.id, newTitle: editingText)
+                    editingItem = nil
+                }
+                Button("Cancel", role: .cancel) {
+                    editingItem = nil
+                }
+            }
         }
     }
 }
