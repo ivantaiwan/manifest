@@ -1,6 +1,5 @@
 import PhotosUI
 import SwiftUI
-import ImageIO
 
 struct GratitudeView: View {
     @ObservedObject var viewModel: GratitudeViewModel
@@ -8,7 +7,7 @@ struct GratitudeView: View {
 
     @State private var selectedEntry: GratitudeEntry?
     @State private var selectedPhotoItem: PhotosPickerItem?
-    @State private var showPhotoAlert = false
+    @State private var photoPickedPulse = false
 
     private let moodItems: [(value: Int, emoji: String)] = [
         (1, "😔"), (2, "🙂"), (3, "😊"), (4, "😄"), (5, "🤩")
@@ -40,20 +39,13 @@ struct GratitudeView: View {
                 Task {
                     if let data = try? await newItem.loadTransferable(type: Data.self) {
                         await MainActor.run {
-                            if isPhotoFromToday(data) {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.72)) {
                                 viewModel.pendingImageData = data
-                            } else {
-                                viewModel.pendingImageData = nil
-                                showPhotoAlert = true
+                                photoPickedPulse.toggle()
                             }
                         }
                     }
                 }
-            }
-            .alert("這張照片不是今天拍的", isPresented: $showPhotoAlert) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text("感恩日記目前只允許上傳當天拍攝的照片。")
             }
         }
     }
@@ -87,19 +79,42 @@ struct GratitudeView: View {
     }
 
     private var photoPickerCard: some View {
-        HStack(spacing: 10) {
-            PhotosPicker(selection: $selectedPhotoItem, matching: .images, photoLibrary: .shared()) {
-                Label("選擇當天照片（可選）", systemImage: "photo")
-                    .font(.subheadline.weight(.semibold))
-            }
-            .buttonStyle(.bordered)
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                PhotosPicker(selection: $selectedPhotoItem, matching: .images, photoLibrary: .shared()) {
+                    Label(L10n.t(.selectPhotoOptional, settings.language), systemImage: "photo")
+                        .font(.subheadline.weight(.semibold))
+                }
+                .buttonStyle(.bordered)
 
-            if let imageData = viewModel.pendingImageData, let image = UIImage(data: imageData) {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 48, height: 48)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                if let imageData = viewModel.pendingImageData, let image = UIImage(data: imageData) {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(width: 48, height: 48)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(ManifestTheme.pink.opacity(0.6), lineWidth: 1)
+                        )
+                        .transition(.scale.combined(with: .opacity))
+                }
+            }
+
+            if viewModel.pendingImageData != nil {
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.seal.fill")
+                        .foregroundStyle(ManifestTheme.pink)
+                        .symbolEffect(.bounce, value: photoPickedPulse)
+                    Text(L10n.t(.selectedTodayPhoto, settings.language))
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.primary.opacity(0.85))
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(ManifestTheme.cardGradient.opacity(0.6))
+                .clipShape(Capsule())
+                .transition(.move(edge: .top).combined(with: .opacity))
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -116,7 +131,7 @@ struct GratitudeView: View {
 
     private var datePickerBar: some View {
         DatePicker(
-            "日曆",
+            L10n.t(.calendar, settings.language),
             selection: $viewModel.selectedDate,
             displayedComponents: .date
         )
@@ -151,27 +166,6 @@ struct GratitudeView: View {
         return (line?.isEmpty == false ? line! : text).trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    private func isPhotoFromToday(_ data: Data) -> Bool {
-        guard
-            let source = CGImageSourceCreateWithData(data as CFData, nil),
-            let metadata = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
-        else {
-            return false
-        }
-
-        let exif = metadata[kCGImagePropertyExifDictionary] as? [CFString: Any]
-        let tiff = metadata[kCGImagePropertyTIFFDictionary] as? [CFString: Any]
-        let dateString =
-            (exif?[kCGImagePropertyExifDateTimeOriginal] as? String) ??
-            (tiff?[kCGImagePropertyTIFFDateTime] as? String)
-
-        guard let dateString else { return false }
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.dateFormat = "yyyy:MM:dd HH:mm:ss"
-        guard let date = formatter.date(from: dateString) else { return false }
-        return Calendar.current.isDateInToday(date)
-    }
 }
 
 private struct MoodChip: View {
@@ -207,20 +201,12 @@ private struct GratitudeDetailCard: View {
     let entry: GratitudeEntry
     let language: AppLanguage
     let onDone: () -> Void
+    @State private var showFullImage = false
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    if let imageData = entry.imageData, let image = UIImage(data: imageData) {
-                        Image(uiImage: image)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(height: 190)
-                            .frame(maxWidth: .infinity)
-                            .clipShape(RoundedRectangle(cornerRadius: 16))
-                    }
-
                     Text(entry.createdAt, style: .date)
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
@@ -228,6 +214,28 @@ private struct GratitudeDetailCard: View {
                         .font(.subheadline.weight(.semibold))
                     Text(entry.text)
                         .frame(maxWidth: .infinity, alignment: .leading)
+
+                    if let imageData = entry.imageData, let image = UIImage(data: imageData) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(L10n.t(.photoLabel, language))
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                            Button {
+                                showFullImage = true
+                            } label: {
+                                Image(uiImage: image)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 88, height: 88)
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 12)
+                                            .stroke(Color.white.opacity(0.85), lineWidth: 1)
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
                 }
                 .padding()
                 .background(ManifestTheme.cardGradient)
@@ -237,10 +245,33 @@ private struct GratitudeDetailCard: View {
             .navigationTitle(L10n.t(.gratitudeTitle, language))
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done", action: onDone)
+                    Button(L10n.t(.done, language), action: onDone)
                 }
             }
             .manifestBackground()
+            .fullScreenCover(isPresented: $showFullImage) {
+                if let imageData = entry.imageData, let image = UIImage(data: imageData) {
+                    ZStack {
+                        Color.black.ignoresSafeArea()
+                        Image(uiImage: image)
+                            .resizable()
+                            .scaledToFit()
+                            .ignoresSafeArea()
+                        VStack {
+                            HStack {
+                                Spacer()
+                                Button(L10n.t(.done, language)) { showFullImage = false }
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 8)
+                                    .background(.ultraThinMaterial)
+                                    .clipShape(Capsule())
+                            }
+                            .padding()
+                            Spacer()
+                        }
+                    }
+                }
+            }
         }
         .presentationDetents([.medium, .large])
     }

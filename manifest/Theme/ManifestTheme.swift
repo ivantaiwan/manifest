@@ -6,12 +6,8 @@ enum ManifestTheme {
     static let babyBlue = Color(red: 0.66, green: 0.85, blue: 0.99)
     static let surface = Color.white.opacity(0.84)
 
-    static var appGradient: LinearGradient {
-        LinearGradient(
-            colors: [pink.opacity(0.32), lilac.opacity(0.32), babyBlue.opacity(0.32)],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
+    static var appBackground: Color {
+        Color(.systemGroupedBackground)
     }
 
     static var cardGradient: LinearGradient {
@@ -26,7 +22,7 @@ enum ManifestTheme {
 struct ManifestBackground: ViewModifier {
     func body(content: Content) -> some View {
         content
-            .background(ManifestTheme.appGradient.ignoresSafeArea())
+            .background(ManifestTheme.appBackground.ignoresSafeArea())
     }
 }
 

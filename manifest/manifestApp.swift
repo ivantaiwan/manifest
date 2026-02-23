@@ -11,55 +11,55 @@ struct ManifestApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ZStack {
-                TabView {
-                    MorningTodoView(viewModel: morningVM)
-                        .environmentObject(settingsVM)
-                        .tabItem {
-                            Label(L10n.t(.tabMorning, settingsVM.language), systemImage: "sun.max.fill")
-                        }
-
-                    GratitudeView(viewModel: gratitudeVM)
-                        .environmentObject(settingsVM)
-                        .tabItem {
-                            Label(L10n.t(.tabGratitude, settingsVM.language), systemImage: "heart.text.square.fill")
-                        }
-
-                    MeditationView(viewModel: meditationVM)
-                        .environmentObject(settingsVM)
-                        .tabItem {
-                            Label(L10n.t(.tabMeditation, settingsVM.language), systemImage: "moon.stars.fill")
-                        }
-
-                    UniverseView(viewModel: universeVM)
-                        .environmentObject(settingsVM)
-                        .tabItem {
-                            Label(L10n.t(.tabUniverse, settingsVM.language), systemImage: "sparkles")
-                        }
-
-                    SettingsView()
-                        .environmentObject(settingsVM)
-                        .tabItem {
-                            Label(L10n.t(.tabSettings, settingsVM.language), systemImage: "gearshape.fill")
-                        }
-                }
-                .tint(ManifestTheme.pink)
-
+            Group {
                 if showIntro {
-                    IntroManifestView()
-                        .environmentObject(settingsVM)
-                        .transition(.opacity)
-                        .zIndex(10)
+                    IntroManifestView {
+                        withAnimation(.easeInOut(duration: 0.28)) {
+                            showIntro = false
+                        }
+                    }
+                    .environmentObject(settingsVM)
+                    .transition(.opacity)
+                } else {
+                    TabView {
+                        MorningTodoView(viewModel: morningVM)
+                            .environmentObject(settingsVM)
+                            .tabItem {
+                                Label(L10n.t(.tabMorning, settingsVM.language), systemImage: "sun.max.fill")
+                            }
+
+                        GratitudeView(viewModel: gratitudeVM)
+                            .environmentObject(settingsVM)
+                            .tabItem {
+                                Label(L10n.t(.tabGratitude, settingsVM.language), systemImage: "heart.text.square.fill")
+                            }
+
+                        MeditationView(viewModel: meditationVM)
+                            .environmentObject(settingsVM)
+                            .tabItem {
+                                Label(L10n.t(.tabMeditation, settingsVM.language), systemImage: "moon.stars.fill")
+                            }
+
+                        UniverseView(viewModel: universeVM)
+                            .environmentObject(settingsVM)
+                            .tabItem {
+                                Label(L10n.t(.tabUniverse, settingsVM.language), systemImage: "sparkles")
+                            }
+
+                        SettingsView()
+                            .environmentObject(settingsVM)
+                            .tabItem {
+                                Label(L10n.t(.tabSettings, settingsVM.language), systemImage: "gearshape.fill")
+                            }
+                    }
+                    .tint(ManifestTheme.pink)
                 }
             }
             .task {
-                await universeVM.bootstrapNotifications()
-                if showIntro {
-                    try? await Task.sleep(for: .seconds(1.8))
-                    withAnimation(.easeInOut(duration: 0.35)) {
-                        showIntro = false
-                    }
-                }
+                await universeVM.bootstrapNotifications(language: settingsVM.language)
+            }
+            .task(id: settingsVM.language) {
+                await universeVM.bootstrapNotifications(language: settingsVM.language)
             }
         }
     }

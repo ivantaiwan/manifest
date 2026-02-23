@@ -8,15 +8,15 @@ final class UniverseViewModel: ObservableObject {
     private let quoteService = UniverseQuoteService()
 
     init() {
-        currentQuote = quoteService.randomQuote()
+        currentQuote = quoteService.randomQuote(for: .zhHant)
     }
 
-    func refreshQuote() {
-        currentQuote = quoteService.randomQuote()
+    func refreshQuote(language: AppLanguage) {
+        currentQuote = quoteService.randomQuote(for: language)
     }
 
-    func bootstrapNotifications() async {
+    func bootstrapNotifications(language: AppLanguage) async {
         await NotificationService.shared.requestPermission()
-        await NotificationService.shared.rescheduleEveryThreeHours()
+        await NotificationService.shared.rescheduleEveryThreeHours(language: language)
     }
 }

@@ -79,12 +79,12 @@ struct MorningTodoView: View {
                 set: { if !$0 { editingItem = nil } }
             )) {
                 TextField(L10n.t(.addTodoPlaceholder, settings.language), text: $editingText)
-                Button("OK") {
+                Button(L10n.t(.ok, settings.language)) {
                     guard let item = editingItem else { return }
                     viewModel.updateTask(id: item.id, newTitle: editingText)
                     editingItem = nil
                 }
-                Button("Cancel", role: .cancel) {
+                Button(L10n.t(.cancel, settings.language), role: .cancel) {
                     editingItem = nil
                 }
             }

@@ -3,10 +3,16 @@ import SwiftUI
 struct IntroManifestView: View {
     @EnvironmentObject var settings: AppSettingsViewModel
     @State private var visible = false
+    @State private var quote = UniverseQuoteService().randomQuote(for: .zhHant)
+    let onEnter: () -> Void
 
     var body: some View {
         ZStack {
-            ManifestTheme.appGradient
+            LinearGradient(
+                colors: [ManifestTheme.pink.opacity(0.35), ManifestTheme.lilac.opacity(0.35), ManifestTheme.babyBlue.opacity(0.35)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
                 .ignoresSafeArea()
 
             VStack(spacing: 18) {
@@ -20,11 +26,7 @@ struct IntroManifestView: View {
                         )
                     )
 
-                Text(L10n.t(.universeQuote, settings.language))
-                    .font(.headline)
-                    .foregroundStyle(.secondary)
-
-                Text(launchSubtitle)
+                Text(quote)
                     .font(.subheadline)
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.primary.opacity(0.85))
@@ -39,17 +41,16 @@ struct IntroManifestView: View {
             .scaleEffect(visible ? 1 : 0.96)
             .animation(.easeOut(duration: 0.45), value: visible)
         }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            onEnter()
+        }
         .onAppear {
+            quote = UniverseQuoteService().randomQuote(for: settings.language)
             visible = true
         }
-    }
-
-    private var launchSubtitle: String {
-        switch settings.language {
-        case .zhHant: return "你的意圖，正在成形。"
-        case .en: return "Your intention is taking shape."
-        case .ja: return "あなたの意図は、今かたちになる。"
-        case .ko: return "당신의 의도가 형태를 갖추고 있어요."
+        .onChange(of: settings.language) { _, newLanguage in
+            quote = UniverseQuoteService().randomQuote(for: newLanguage)
         }
     }
 }

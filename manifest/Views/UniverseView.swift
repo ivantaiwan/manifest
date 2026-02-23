@@ -20,7 +20,7 @@ struct UniverseView: View {
                     .padding(.horizontal)
 
                 Button(L10n.t(.changeQuote, settings.language)) {
-                    viewModel.refreshQuote()
+                    viewModel.refreshQuote(language: settings.language)
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(ManifestTheme.babyBlue)
@@ -34,6 +34,12 @@ struct UniverseView: View {
             .padding(.top)
             .navigationTitle(L10n.t(.universeTitle, settings.language))
             .manifestBackground()
+            .onAppear {
+                viewModel.refreshQuote(language: settings.language)
+            }
+            .onChange(of: settings.language) { _, newLanguage in
+                viewModel.refreshQuote(language: newLanguage)
+            }
         }
     }
 }

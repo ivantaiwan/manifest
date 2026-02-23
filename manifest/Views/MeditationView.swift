@@ -3,6 +3,28 @@ import SwiftUI
 struct MeditationView: View {
     @ObservedObject var viewModel: MeditationViewModel
     @EnvironmentObject var settings: AppSettingsViewModel
+    private let minuteRange = Array(0...180)
+    private let secondRange = Array(0...59)
+
+    private var minuteBinding: Binding<Int> {
+        Binding(
+            get: { Int(viewModel.selectedDuration) / 60 },
+            set: { newMinute in
+                let seconds = Int(viewModel.selectedDuration) % 60
+                viewModel.selectedDuration = TimeInterval((newMinute * 60) + seconds)
+            }
+        )
+    }
+
+    private var secondBinding: Binding<Int> {
+        Binding(
+            get: { Int(viewModel.selectedDuration) % 60 },
+            set: { newSecond in
+                let minutes = Int(viewModel.selectedDuration) / 60
+                viewModel.selectedDuration = TimeInterval((minutes * 60) + newSecond)
+            }
+        )
+    }
 
     var body: some View {
         NavigationStack {
@@ -10,7 +32,7 @@ struct MeditationView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("\(L10n.t(.today, settings.language))：\(viewModel.todayText)")
                         .font(.subheadline)
-                    Text("\(L10n.t(.streak, settings.language))：\(viewModel.streakDays) 日")
+                    Text("\(L10n.t(.streak, settings.language))：\(viewModel.streakDays) \(L10n.t(.dayUnit, settings.language))")
                         .font(.headline)
                     Text("\(L10n.t(.latestCompletion, settings.language))：\(viewModel.lastCompletedText)")
                         .font(.footnote)
@@ -22,13 +44,26 @@ struct MeditationView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 16))
                 .padding(.horizontal)
 
-                Picker("分鐘", selection: $viewModel.selectedMinutes) {
-                    Text("5 分").tag(5)
-                    Text("10 分").tag(10)
-                    Text("15 分").tag(15)
+                HStack(spacing: 0) {
+                    Picker(L10n.t(.minuteUnit, settings.language), selection: minuteBinding) {
+                        ForEach(minuteRange, id: \.self) { minute in
+                            Text("\(minute) \(L10n.t(.minuteUnit, settings.language))").tag(minute)
+                        }
+                    }
+                    .pickerStyle(.wheel)
+
+                    Picker(L10n.t(.secondUnit, settings.language), selection: secondBinding) {
+                        ForEach(secondRange, id: \.self) { second in
+                            Text("\(second) \(L10n.t(.secondUnit, settings.language))").tag(second)
+                        }
+                    }
+                    .pickerStyle(.wheel)
                 }
-                .pickerStyle(.segmented)
+                .frame(height: 170)
+                .background(ManifestTheme.surface)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
                 .padding(.horizontal)
+                .disabled(viewModel.isRunning)
 
                 Text(viewModel.timeText())
                     .font(.system(size: 56, weight: .bold, design: .rounded))
@@ -59,6 +94,12 @@ struct MeditationView: View {
             .padding(.top)
             .navigationTitle(L10n.t(.meditationTitle, settings.language))
             .manifestBackground()
+            .onAppear {
+                viewModel.applyLanguage(settings.language)
+            }
+            .onChange(of: settings.language) { _, newLanguage in
+                viewModel.applyLanguage(newLanguage)
+            }
         }
     }
 }

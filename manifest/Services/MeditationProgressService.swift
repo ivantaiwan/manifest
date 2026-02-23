@@ -44,16 +44,17 @@ final class MeditationProgressService {
         return progress
     }
 
-    func formatDate(_ date: Date = Date()) -> String {
+    func formatDate(_ date: Date = Date(), language: AppLanguage) -> String {
         let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "zh_TW")
-        formatter.dateFormat = "yyyy 年 M 月 d 日"
+        formatter.locale = locale(for: language)
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
         return formatter.string(from: date)
     }
 
-    func formatDayKey(_ dayKey: String?) -> String {
-        guard let dayKey, let date = dayDate(from: dayKey) else { return "尚未完成" }
-        return formatDate(date)
+    func formatDayKey(_ dayKey: String?, language: AppLanguage) -> String {
+        guard let dayKey, let date = dayDate(from: dayKey) else { return L10n.t(.notCompletedYet, language) }
+        return formatDate(date, language: language)
     }
 
     private func dayKey(for date: Date) -> String {
@@ -68,5 +69,18 @@ final class MeditationProgressService {
         formatter.locale = Locale(identifier: "zh_TW")
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.date(from: dayKey)
+    }
+
+    private func locale(for language: AppLanguage) -> Locale {
+        switch language {
+        case .zhHant:
+            return Locale(identifier: "zh-Hant-TW")
+        case .en:
+            return Locale(identifier: "en_US")
+        case .ja:
+            return Locale(identifier: "ja_JP")
+        case .ko:
+            return Locale(identifier: "ko_KR")
+        }
     }
 }
